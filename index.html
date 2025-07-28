@@ -1,1 +1,169 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>হার্ডওয়ার দোকান অর্ডার সিস্টেম</title>
+  <style>
+    body {
+      font-family: 'Hind Siliguri', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+    }
+    header {
+      background-color: #0d9488;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    section {
+      padding: 1rem;
+    }
+    input, select, textarea, button {
+      display: block;
+      width: 100%;
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background-color: #e0f2f1;
+    }
+    .btn {
+      background-color: #0d9488;
+      color: white;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #0f766e;
+    }
+    .status-pending { color: orange; }
+    .status-delivered { color: green; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>হার্ডওয়ার দোকান অর্ডার ফরম</h1>
+  </header>
+
+  <section>
+    <h2>নতুন অর্ডার দিন</h2>
+    <form id="orderForm">
+      <input type="text" id="name" placeholder="ক্রেতার নাম" required>
+      <input type="text" id="phone" placeholder="মোবাইল নম্বর" required>
+      <textarea id="items" placeholder="পণ্যের বিবরণ লিখুন" required></textarea>
+      <input type="number" id="total" placeholder="মোট মূল্য" required>
+      <input type="text" id="image" placeholder="পণ্যের ছবি URL (ঐচ্ছিক)">
+      <input type="text" id="location" placeholder="লোকেশন / ঠিকানা">
+      <select id="status">
+        <option value="pending">Pending</option>
+        <option value="delivered">Delivered</option>
+      </select>
+      <button type="submit" class="btn">অর্ডার সাবমিট করুন</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>অর্ডার তালিকা (ড্যাশবোর্ড)</h2>
+    <button onclick="exportToCSV()" class="btn">CSV ডাউনলোড করুন</button>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th>তারিখ</th>
+          <th>নাম</th>
+          <th>মোবাইল</th>
+          <th>পণ্য</th>
+          <th>মূল্য</th>
+          <th>ছবি</th>
+          <th>ঠিকানা</th>
+          <th>অবস্থা</th>
+          <th>WhatsApp</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script>
+    const sheetURL = 'https://sheetdb.io/api/v1/ka2odu0zimmi9';
+
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const date = new Date().toLocaleDateString('bn-BD');
+
+      const data = {
+        date,
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        items: document.getElementById('items').value,
+        total: document.getElementById('total').value,
+        image: document.getElementById('image').value,
+        location: document.getElementById('location').value,
+        status: document.getElementById('status').value
+      };
+
+      await fetch(sheetURL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data })
+      });
+
+      this.reset();
+      loadOrders();
+    });
+
+    async function loadOrders() {
+      const res = await fetch(sheetURL);
+      const data = await res.json();
+      const tbody = document.querySelector('#orderTable tbody');
+      tbody.innerHTML = '';
+
+      data.forEach(order => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${order.date || ''}</td>
+          <td>${order.name}</td>
+          <td>${order.phone}</td>
+          <td>${order.items}</td>
+          <td>${order.total}</td>
+          <td>${order.image ? `<img src="${order.image}" width="50">` : ''}</td>
+          <td>${order.location || ''}</td>
+          <td class="status-${order.status}">${order.status}</td>
+          <td><a href="https://wa.me/88${order.phone}" target="_blank">Message</a></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportToCSV() {
+      const rows = [...document.querySelectorAll("table tr")];
+      const csv = rows.map(row =>
+        [...row.children].map(cell => cell.innerText).join(",")
+      ).join("\n");
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'orders.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+
+    loadOrders();
+  </script>
+</body>
+</html>
 
